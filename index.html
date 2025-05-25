@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Consulta de Biblioteca</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body {
       padding: 20px;
@@ -28,6 +27,40 @@
     .loading {
       opacity: 0.5;
       pointer-events: none;
+    }
+
+    /* Estilo para celulares */
+    @media (max-width: 576px) {
+      .table thead {
+        display: none;
+      }
+
+      .table tr {
+        display: block;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+      }
+
+      .table td {
+        display: block;
+        text-align: left !important;
+        font-size: 14px;
+        border: none;
+        padding: 5px 0;
+      }
+
+      .table td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        width: 90px;
+      }
+
+      .table td.text-center {
+        text-align: left !important;
+      }
     }
   </style>
 </head>
@@ -82,7 +115,6 @@
         .then(res => res.text())
         .then(csv => {
           livros = csvToJson(csv);
-          console.log('Dados dos livros após csvToJson:', livros);
           displayResults(livros);
         })
         .catch(err => {
@@ -96,28 +128,64 @@
     });
 
     function csvToJson(csv) {
-      const parsed = Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true
-      });
+      const [headerLine, ...lines] = csv.trim().split('\n');
+      const headers = headerLine.split(',').map(h => h.trim());
 
-      if (parsed.errors.length > 0) {
-        console.error("Erros no parsing do CSV:", parsed.errors);
-      }
+      return lines.map((line, index) => {
+        if (line.trim() === '') return null;
 
-      return parsed.data.map(row => ({
-        TITULO: row["TÍTULO"]?.trim() || "",
-        AUTOR: row["AUTOR"]?.trim() || "",
-        ARMARIO: row["ARMARIO"]?.trim() || "",
-        PRATILEIRA: row["PRATILEIRA"]?.trim() || ""
-      }));
+        let title = '', author = '', armario = '', pratileira = '';
+
+        const firstQuoteIndex = line.indexOf('"');
+        const secondQuoteIndex = line.indexOf('"', firstQuoteIndex + 1);
+
+        if (firstQuoteIndex !== -1 && secondQuoteIndex !== -1) {
+          title = line.substring(firstQuoteIndex + 1, secondQuoteIndex);
+          line = line.substring(secondQuoteIndex + 1).trim();
+        } else {
+          const parts = line.split(',');
+          title = parts[0]?.trim() || '';
+          line = parts.slice(1).join(',');
+        }
+
+        if (line.startsWith(',')) line = line.substring(1).trim();
+
+        const thirdQuoteIndex = line.indexOf('"');
+        const fourthQuoteIndex = line.indexOf('"', thirdQuoteIndex + 1);
+
+        if (thirdQuoteIndex !== -1 && fourthQuoteIndex !== -1) {
+          author = line.substring(thirdQuoteIndex + 1, fourthQuoteIndex);
+          line = line.substring(fourthQuoteIndex + 1).trim();
+        } else {
+          const parts = line.split(',');
+          author = parts[0]?.trim() || '';
+          line = parts.slice(1).join(',');
+        }
+
+        if (line.startsWith(',')) line = line.substring(1).trim();
+
+        const remainingParts = line.split(',');
+        armario = remainingParts[0]?.trim() || '';
+        pratileira = remainingParts[1]?.trim() || '';
+
+        return {
+          [headers[0]]: title,
+          [headers[1]]: author,
+          [headers[2]]: armario,
+          [headers[3]]: pratileira
+        };
+      }).filter(Boolean);
     }
 
     function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l => {
-        return l.TITULO.toLowerCase().includes(query) ||
-               l.AUTOR.toLowerCase().includes(query);
+        const tituloExists = typeof l.TITULO === 'string';
+        const autorExists = typeof l.AUTOR === 'string';
+
+        if (!tituloExists || !autorExists) return false;
+
+        return l.TITULO.toLowerCase().includes(query) || l.AUTOR.toLowerCase().includes(query);
       });
       displayResults(filtrados);
     }
@@ -140,22 +208,19 @@
       results.sort((a, b) => {
         const valA = a[currentSortColumn] || '';
         const valB = b[currentSortColumn] || '';
-
-        if (sortDirection === 'asc') {
-          return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
-        } else {
-          return valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
-        }
+        return sortDirection === 'asc'
+          ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
+          : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
       });
 
       let html = '';
       results.forEach(livro => {
         html += `
           <tr>
-            <td>${escapeHtml(livro.TITULO)}</td>
-            <td>${escapeHtml(livro.AUTOR)}</td>
-            <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-            <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
+            <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
+            <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
+            <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
+            <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
           </tr>`;
       });
 
@@ -174,13 +239,7 @@
     }
 
     function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
       return text?.replace(/[&<>"']/g, m => map[m]) || '';
     }
   </script>
