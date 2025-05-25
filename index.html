@@ -151,56 +151,55 @@
       document.getElementById('searchInput').value = '';
       displayResults(livros);
     }
+ function displayResults(results) {
+  const tbody = document.getElementById('resultsBody');
+  const countSpan = document.getElementById('totalCount');
 
-    function displayResults(results) {
-      const tbody = document.getElementById('resultsBody');
-      const countSpan = document.getElementById('totalCount');
+  if (!results.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum livro encontrado</td></tr>';
+    countSpan.textContent = '0';
+    return;
+  }
 
-      if (!results.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum livro encontrado</td></tr>';
-        countSpan.textContent = '0';
-        return;
-      }
+  let html = '';
+  results.forEach(livro => {
+    const armario = (livro.ARMARIO || '').trim().toLowerCase();
+    const prateleira = (livro.PRATILEIRA || '').trim().toLowerCase();
+    const titulo = (livro.TITULO || '').trim().toLowerCase();
 
-      let html = '';
-      results.forEach(livro => {
-        const armario = (livro.ARMARIO || '').trim().toLowerCase();
-        const prateleira = (livro.PRATILEIRA || '').trim().toLowerCase();
-        const titulo = (livro.TITULO || '').trim().toLowerCase();
+    const mesmosLugar = livros
+      .filter(l =>
+        (l.ARMARIO || '').trim().toLowerCase() === armario &&
+        (l.PRATILEIRA || '').trim().toLowerCase() === prateleira
+      )
+      .sort((a, b) => (a.TITULO || '').trim().localeCompare((b.TITULO || '').trim()));
 
-        const mesmosLugar = livros
-          .filter(l =>
-            (l.ARMARIO || '').trim().toLowerCase() === armario &&
-            (l.PRATILEIRA || '').trim().toLowerCase() === prateleira
-          )
-          .sort((a, b) => (a.TITULO || '').trim().localeCompare((b.TITULO || '').trim()));
+    const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim().toLowerCase() === titulo) + 1;
+    const total = mesmosLugar.length;
+    const percent = total > 0 ? Math.round((posicao / total) * 100) : 0;
 
-        const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim().toLowerCase() === titulo) + 1;
-        const total = mesmosLugar.length;
-        const percent = total > 0 ? (posicao / total * 100).toFixed(1) : 0;
-
-        html += `
-    <tr>
-      <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
-      <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
-      <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-      <td data-label="Prateleira" class="text-center">
-        ${escapeHtml(livro.PRATILEIRA)}
-        <div class="progress mt-2" style="height: 20px;">
-          <div class="progress-bar bg-success" role="progressbar"
-                style="width: ${percent}%" aria-valuenow="${posicao}" aria-valuemin="0" aria-valuemax="${total}">
+    html += `
+      <tr>
+        <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
+        <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
+        <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
+        <td data-label="Prateleira" class="text-center">
+          ${escapeHtml(livro.PRATILEIRA)}
+          <div class="progress mt-2" style="height: 20px;">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width: ${percent}%" aria-valuenow="${posicao}" aria-valuemin="0" aria-valuemax="${total}">
+            </div>
           </div>
-        </div>
-        <div style="font-size: 0.9em; margin-top: 2px;">📚 Livro ${posicao} de ${total}</div>
-      </td>
-    </tr>`;
-      });
+          <div style="font-size: 0.9em; margin-top: 4px;">📚 Livro ${posicao} de ${total}</div>
+        </td>
+      </tr>`;
+  });
 
+  tbody.innerHTML = html;
+  countSpan.textContent = results.length;
+}
 
-      tbody.innerHTML = html;
-      countSpan.textContent = results.length;
-    }
-
+ 
     function escapeHtml(text) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
       return text?.replace(/[&<>"']/g, m => map[m]) || '';
