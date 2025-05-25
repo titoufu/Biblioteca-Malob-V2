@@ -73,8 +73,8 @@
   <script>
     const CSV_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros.csv';
     let livros = [];
-    let currentSortColumn = 'TITULO'; // Coluna padrão para ordenação
-    let sortDirection = 'asc'; // Direção padrão para ordenação
+    let currentSortColumn = 'TITULO'; 
+    let sortDirection = 'asc'; 
 
     document.addEventListener('DOMContentLoaded', function () {
       fetch(CSV_URL)
@@ -125,7 +125,7 @@
           obj[header] = values[i] || ''; 
         });
         
-        // Esta verificação agora está alinhada com os nomes exatos do CSV
+        // CORREÇÃO: Usando 'TITULO' e 'AUTOR' (TUDO MAIÚSCULO) para a verificação do warn
         if (!obj.TITULO || !obj.AUTOR) { 
             console.warn(`Livro com 'TITULO' ou 'AUTOR' faltando/vazio na linha ${index + 2}:`, obj);
         }
@@ -137,7 +137,6 @@
     function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l => {
-        // AJUSTADO: Usando l.TITULO e l.AUTOR (TUDO MAIÚSCULO)
         const tituloExists = typeof l.TITULO === 'string';
         const autorExists = typeof l.AUTOR === 'string';
 
@@ -168,7 +167,6 @@
         return;
       }
 
-      // Ordenação inicial ou após busca
       results.sort((a, b) => {
           const valA = a[currentSortColumn] || '';
           const valB = b[currentSortColumn] || '';
@@ -184,7 +182,11 @@
       results.forEach(livro => {
         html += `
           <tr>
-            <td>${escapeHtml(livro.TITULO)}</td>    <td>${escapeHtml(livro.AUTOR)}</td>     <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>    <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td> </tr>`;
+            <td>${escapeHtml(livro.TITULO)}</td>    
+            <td>${escapeHtml(livro.AUTOR)}</td>     
+            <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>    
+            <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td> 
+          </tr>`;
       });
 
       tbody.innerHTML = html;
@@ -198,7 +200,6 @@
             currentSortColumn = column;
             sortDirection = 'asc';
         }
-        // Aplica a busca atual antes de re-exibir com a nova ordenação
         searchBooks(); 
     }
 
