@@ -151,7 +151,7 @@
       document.getElementById('searchInput').value = '';
       displayResults(livros);
     }
- function displayResults(results) {
+function displayResults(results) {
   const tbody = document.getElementById('resultsBody');
   const countSpan = document.getElementById('totalCount');
 
@@ -183,14 +183,14 @@
         <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
         <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
         <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-        <td data-label="Prateleira" class="text-center">
-          ${escapeHtml(livro.PRATILEIRA)}
-          <div class="progress mt-2" style="height: 20px;">
+        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
+        <td data-label="Posição">
+          <div class="progress" style="height: 20px;">
             <div class="progress-bar bg-success" role="progressbar"
                  style="width: ${percent}%" aria-valuenow="${posicao}" aria-valuemin="0" aria-valuemax="${total}">
             </div>
           </div>
-          <div style="font-size: 0.9em; margin-top: 4px;">📚 ${posicao} de ${total}</div>
+          <div style="font-size: 0.9em; margin-top: 4px;"> ${posicao} de ${total}</div>
         </td>
       </tr>`;
   });
