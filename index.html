@@ -39,7 +39,7 @@
     </div>
 
     <div class="input-group mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Digite TITULO ou AUTOR..." aria-label="Buscar livros">
+      <input type="text" id="searchInput" class="form-control" placeholder="Digite Título ou Autor..." aria-label="Buscar livros">
       <button class="btn btn-primary" type="button" id="searchButton" onclick="searchBooks()">
         <span id="searchIcon" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
         Buscar
@@ -51,9 +51,9 @@
       <table class="table table-striped table-hover">
         <thead class="table-light">
           <tr>
-            <th onclick="sortTable('TITULO')">Título</th>
-            <th onclick="sortTable('AUTOR')">Autor</th>
-            <th class="text-center">Armário</th>
+            <th onclick="sortTable('Titulo')">Título</th>
+            <th onclick="sortTable('Autor')">Autor</th>
+            <th class="text-center">Estante</th>
             <th class="text-center">Prateleira</th>
           </tr>
         </thead>
@@ -79,12 +79,12 @@
         .then(res => res.text())
         .then(csv => {
           livros = csvToJson(csv);
-          console.log('Dados dos livros após csvToJson:', livros); // LOG 1: Veja o array completo
+          console.log('Dados dos livros após csvToJson:', livros);
           displayResults(livros);
         })
         .catch(err => {
           document.getElementById('resultsBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
-          console.error('Erro no fetch do CSV:', err); // LOG: Erro no fetch
+          console.error('Erro no fetch do CSV:', err);
         });
 
       document.getElementById('searchInput').addEventListener('keyup', function (event) {
@@ -94,7 +94,7 @@
 
     function csvToJson(csv) {
       const [headerLine, ...lines] = csv.trim().split('\n');
-      console.log('Linha de cabeçalho bruta:', headerLine); // LOG: Linha de cabeçalho
+      console.log('Linha de cabeçalho bruta:', headerLine);
       const headers = headerLine.split(',').map(h => {
         let cleanedHeader = h.trim();
         if (cleanedHeader.startsWith('"') && cleanedHeader.endsWith('"')) {
@@ -102,13 +102,12 @@
         }
         return cleanedHeader;
       });
-      console.log('Cabeçalhos processados:', headers); // LOG: Cabeçalhos processados
+      console.log('Cabeçalhos processados:', headers);
 
       return lines.map((line, index) => {
-        // Pula linhas vazias que podem causar problemas
         if (line.trim() === '') {
           console.warn(`Linha vazia no CSV detectada e pulada (linha ${index + 2}).`);
-          return null; // Retorna null para ser filtrado depois
+          return null;
         }
 
         const values = line.split(',').map(v => {
@@ -121,12 +120,12 @@
 
         const obj = {};
         headers.forEach((header, i) => {
-          obj[header] = values[i] || ''; // Garante string vazia se o valor não existir
+          obj[header] = values[i] || '';
         });
         
-        // LOG 3: Verifique cada objeto criado
-        if (!obj.TITULO || !obj.AUTOR) {
-            console.warn(`Livro com TITULO ou AUTOR faltando na linha ${index + 2}:`, obj);
+        // CORREÇÃO AQUI: A verificação deve usar a capitalização correta do CSV
+        if (!obj.Titulo || !obj.Autor) { 
+            console.warn(`Livro com 'Titulo' ou 'Autor' faltando/vazio na linha ${index + 2}:`, obj);
         }
 
         return obj;
@@ -136,19 +135,19 @@
     function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l => {
-        // Verifica se TITULO e AUTOR existem antes de chamar toLowerCase
-        const tituloExists = typeof l.TITULO === 'string';
-        const autorExists = typeof l.AUTOR === 'string';
+        // CORREÇÃO AQUI: Usando l.Titulo e l.Autor (com 'T' e 'A' maiúsculos, sem acento)
+        const tituloExists = typeof l.Titulo === 'string';
+        const autorExists = typeof l.Autor === 'string';
 
         if (!tituloExists || !autorExists) {
-            console.warn('Livro com TITULO ou AUTOR não string ao tentar buscar:', l);
-            return false; // Ignora este livro na busca
+            console.warn('Livro com Titulo ou Autor não string ao tentar buscar:', l);
+            return false; 
         }
         
-        return l.TITULO.toLowerCase().includes(query) ||
-               l.AUTOR.toLowerCase().includes(query);
+        return l.Titulo.toLowerCase().includes(query) ||
+               l.Autor.toLowerCase().includes(query);
       });
-      console.log('Livros filtrados:', filtrados); // LOG: Livros após filtro
+      console.log('Livros filtrados:', filtrados);
       displayResults(filtrados);
     }
 
@@ -167,10 +166,10 @@
         return;
       }
 
+      // CORREÇÃO AQUI: Usando a.Titulo e b.Titulo (com 'T' maiúsculo, sem acento)
       results.sort((a, b) => {
-        // Garante que TITULO é uma string para localeCompare
-        const tituloA = a.TITULO || '';
-        const tituloB = b.TITULO || '';
+        const tituloA = a.Titulo || ''; 
+        const tituloB = b.Titulo || ''; 
         return tituloA.localeCompare(tituloB);
       });
 
@@ -178,11 +177,7 @@
       results.forEach(livro => {
         html += `
           <tr>
-            <td>${escapeHtml(livro.TITULO)}</td>
-            <td>${escapeHtml(livro.AUTOR)}</td>
-            <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-            <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
-          </tr>`;
+            <td>${escapeHtml(livro.Titulo)}</td>    <td>${escapeHtml(livro.Autor)}</td>     <td>${escapeHtml(livro.Estante)}</td>   <td>${escapeHtml(livro.Prateleira)}</td> </tr>`;
       });
 
       tbody.innerHTML = html;
