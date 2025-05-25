@@ -39,7 +39,7 @@
     </div>
 
     <div class="input-group mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Digite título ou autor..." aria-label="Buscar livros">
+      <input type="text" id="searchInput" class="form-control" placeholder="Digite TITULO ou AUTOR..." aria-label="Buscar livros">
       <button class="btn btn-primary" type="button" id="searchButton" onclick="searchBooks()">
         <span id="searchIcon" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
         Buscar
@@ -51,9 +51,9 @@
       <table class="table table-striped table-hover">
         <thead class="table-light">
           <tr>
-            <th onclick="sortTable('Título')">Título</th>
-            <th onclick="sortTable('Autor')">Autor</th>
-            <th class="text-center">Estante</th>
+            <th onclick="sortTable('TITULO')">Título</th>
+            <th onclick="sortTable('AUTOR')">Autor</th>
+            <th class="text-center">Armário</th>
             <th class="text-center">Prateleira</th>
           </tr>
         </thead>
@@ -93,11 +93,29 @@
 
     function csvToJson(csv) {
       const [headerLine, ...lines] = csv.trim().split('\n');
-      const headers = headerLine.split(',').map(h => h.trim());
+      const headers = headerLine.split(',').map(h => {
+        let cleanedHeader = h.trim();
+        // Remove aspas duplas do cabeçalho também, se houver
+        if (cleanedHeader.startsWith('"') && cleanedHeader.endsWith('"')) {
+          cleanedHeader = cleanedHeader.slice(1, -1);
+        }
+        return cleanedHeader;
+      });
+
       return lines.map(line => {
-        const values = line.split(',').map(v => v.trim());
+        // Esta solução simples assume que não há vírgulas DENTRO de campos entre aspas.
+        const values = line.split(',').map(v => {
+          // Remove aspas duplas no início e no fim do campo
+          let cleanedValue = v.trim();
+          if (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) {
+            cleanedValue = cleanedValue.slice(1, -1);
+          }
+          return cleanedValue;
+        });
+
         const obj = {};
         headers.forEach((header, i) => {
+          // Certifica-se de que o valor é uma string vazia se estiver faltando, para evitar 'undefined'
           obj[header] = values[i] || '';
         });
         return obj;
@@ -107,8 +125,9 @@
     function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l =>
-        l.Título.toLowerCase().includes(query) ||
-        l.Autor.toLowerCase().includes(query)
+        // AJUSTADO: Usando TITULO e AUTOR em maiúsculas, conforme o novo CSV
+        l.TITULO.toLowerCase().includes(query) ||
+        l.AUTOR.toLowerCase().includes(query)
       );
       displayResults(filtrados);
     }
@@ -128,17 +147,18 @@
         return;
       }
 
-      results.sort((a, b) => a.Título.localeCompare(b.Título));
+      // AJUSTADO: Usando TITULO em maiúsculas para ordenação
+      results.sort((a, b) => {
+        const tituloA = a.TITULO || ''; // AJUSTADO
+        const tituloB = b.TITULO || ''; // AJUSTADO
+        return tituloA.localeCompare(tituloB);
+      });
 
       let html = '';
       results.forEach(livro => {
         html += `
           <tr>
-            <td>${escapeHtml(livro.Título)}</td>
-            <td>${escapeHtml(livro.Autor)}</td>
-            <td class="text-center">${escapeHtml(livro.Estante)}</td>
-            <td class="text-center">${escapeHtml(livro.Prateleira)}</td>
-          </tr>`;
+            <td>${escapeHtml(livro.TITULO)}</td>    <td>${escapeHtml(livro.AUTOR)}</td>     <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>    <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td> </tr>`;
       });
 
       tbody.innerHTML = html;
