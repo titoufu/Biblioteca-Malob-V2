@@ -97,13 +97,9 @@
     function csvToJson(csv) {
       const [headerLine, ...lines] = csv.trim().split('\n');
       console.log('Linha de cabeçalho bruta:', headerLine);
-      const headers = headerLine.split(',').map(h => {
-        let cleanedHeader = h.trim();
-        if (cleanedHeader.startsWith('"') && cleanedHeader.endsWith('"')) {
-          cleanedHeader = cleanedHeader.slice(1, -1);
-        }
-        return cleanedHeader;
-      });
+      
+      // Assumimos que os cabeçalhos são simples e não contêm vírgulas ou aspas
+      const headers = headerLine.split(',').map(h => h.trim());
       console.log('Cabeçalhos processados:', headers);
 
       return lines.map((line, index) => {
@@ -112,20 +108,61 @@
           return null;
         }
 
-        const values = line.split(',').map(v => {
-          let cleanedValue = v.trim();
-          if (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) {
-            cleanedValue = cleanedValue.slice(1, -1);
-          }
-          return cleanedValue;
-        });
+        let title = '';
+        let author = '';
+        let armario = '';
+        let pratileira = '';
 
-        const obj = {};
-        headers.forEach((header, i) => {
-          obj[header] = values[i] || ''; 
-        });
+        // Encontra o primeiro par de aspas para o TÍTULO
+        const firstQuoteIndex = line.indexOf('"');
+        const secondQuoteIndex = line.indexOf('"', firstQuoteIndex + 1);
+
+        if (firstQuoteIndex !== -1 && secondQuoteIndex !== -1) {
+            title = line.substring(firstQuoteIndex + 1, secondQuoteIndex);
+            line = line.substring(secondQuoteIndex + 1).trim(); // Restante da linha
+        } else {
+            // Se não encontrou aspas para o título, tratamos a primeira parte como título
+            const parts = line.split(',');
+            title = parts[0] ? parts[0].trim() : '';
+            line = parts.slice(1).join(',');
+        }
+
+        // Remove a vírgula que separa o título do autor (se houver)
+        if (line.startsWith(',')) {
+            line = line.substring(1).trim();
+        }
+
+        // Encontra o segundo par de aspas para o AUTOR
+        const thirdQuoteIndex = line.indexOf('"');
+        const fourthQuoteIndex = line.indexOf('"', thirdQuoteIndex + 1);
+
+        if (thirdQuoteIndex !== -1 && fourthQuoteIndex !== -1) {
+            author = line.substring(thirdQuoteIndex + 1, fourthQuoteIndex);
+            line = line.substring(fourthQuoteIndex + 1).trim(); // Restante da linha
+        } else {
+            // Se não encontrou aspas para o autor, tratamos a primeira parte como autor
+            const parts = line.split(',');
+            author = parts[0] ? parts[0].trim() : '';
+            line = parts.slice(1).join(',');
+        }
+
+        // Remove a vírgula que separa o autor do armário (se houver)
+        if (line.startsWith(',')) {
+            line = line.substring(1).trim();
+        }
         
-        // CORREÇÃO: Usando 'TITULO' e 'AUTOR' (TUDO MAIÚSCULO) para a verificação do warn
+        // Agora, os campos restantes são simples e delimitados por vírgula
+        const remainingParts = line.split(',');
+        armario = remainingParts[0] ? remainingParts[0].trim() : '';
+        pratileira = remainingParts[1] ? remainingParts[1].trim() : '';
+        
+        const obj = {};
+        obj[headers[0]] = title;
+        obj[headers[1]] = author;
+        obj[headers[2]] = armario;
+        obj[headers[3]] = pratileira;
+        
+        // Verificação de advertência
         if (!obj.TITULO || !obj.AUTOR) { 
             console.warn(`Livro com 'TITULO' ou 'AUTOR' faltando/vazio na linha ${index + 2}:`, obj);
         }
