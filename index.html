@@ -39,7 +39,7 @@
     </div>
 
     <div class="input-group mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Digite Título ou Autor..." aria-label="Buscar livros">
+      <input type="text" id="searchInput" class="form-control" placeholder="Digite TITULO ou AUTOR..." aria-label="Buscar livros">
       <button class="btn btn-primary" type="button" id="searchButton" onclick="searchBooks()">
         <span id="searchIcon" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
         Buscar
@@ -51,10 +51,10 @@
       <table class="table table-striped table-hover">
         <thead class="table-light">
           <tr>
-            <th onclick="sortTable('Titulo')">Título</th>
-            <th onclick="sortTable('Autor')">Autor</th>
-            <th class="text-center">Estante</th>
-            <th class="text-center">Prateleira</th>
+            <th onclick="sortTable('TITULO')">Título</th> 
+            <th onclick="sortTable('AUTOR')">Autor</th>
+            <th class="text-center" onclick="sortTable('ARMARIO')">Armário</th>
+            <th class="text-center" onclick="sortTable('PRATILEIRA')">Prateleira</th>
           </tr>
         </thead>
         <tbody id="resultsBody">
@@ -73,6 +73,8 @@
   <script>
     const CSV_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros.csv';
     let livros = [];
+    let currentSortColumn = 'TITULO'; // Coluna padrão para ordenação
+    let sortDirection = 'asc'; // Direção padrão para ordenação
 
     document.addEventListener('DOMContentLoaded', function () {
       fetch(CSV_URL)
@@ -120,32 +122,32 @@
 
         const obj = {};
         headers.forEach((header, i) => {
-          obj[header] = values[i] || '';
+          obj[header] = values[i] || ''; 
         });
         
-        // CORREÇÃO AQUI: A verificação deve usar a capitalização correta do CSV
-        if (!obj.Titulo || !obj.Autor) { 
-            console.warn(`Livro com 'Titulo' ou 'Autor' faltando/vazio na linha ${index + 2}:`, obj);
+        // Esta verificação agora está alinhada com os nomes exatos do CSV
+        if (!obj.TITULO || !obj.AUTOR) { 
+            console.warn(`Livro com 'TITULO' ou 'AUTOR' faltando/vazio na linha ${index + 2}:`, obj);
         }
 
         return obj;
-      }).filter(Boolean); // Remove quaisquer 'null's retornados por linhas vazias
+      }).filter(Boolean); 
     }
 
     function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l => {
-        // CORREÇÃO AQUI: Usando l.Titulo e l.Autor (com 'T' e 'A' maiúsculos, sem acento)
-        const tituloExists = typeof l.Titulo === 'string';
-        const autorExists = typeof l.Autor === 'string';
+        // AJUSTADO: Usando l.TITULO e l.AUTOR (TUDO MAIÚSCULO)
+        const tituloExists = typeof l.TITULO === 'string';
+        const autorExists = typeof l.AUTOR === 'string';
 
         if (!tituloExists || !autorExists) {
-            console.warn('Livro com Titulo ou Autor não string ao tentar buscar:', l);
+            console.warn('Livro com TITULO ou AUTOR não string ao tentar buscar:', l);
             return false; 
         }
         
-        return l.Titulo.toLowerCase().includes(query) ||
-               l.Autor.toLowerCase().includes(query);
+        return l.TITULO.toLowerCase().includes(query) ||
+               l.AUTOR.toLowerCase().includes(query);
       });
       console.log('Livros filtrados:', filtrados);
       displayResults(filtrados);
@@ -166,22 +168,38 @@
         return;
       }
 
-      // CORREÇÃO AQUI: Usando a.Titulo e b.Titulo (com 'T' maiúsculo, sem acento)
+      // Ordenação inicial ou após busca
       results.sort((a, b) => {
-        const tituloA = a.Titulo || ''; 
-        const tituloB = b.Titulo || ''; 
-        return tituloA.localeCompare(tituloB);
+          const valA = a[currentSortColumn] || '';
+          const valB = b[currentSortColumn] || '';
+
+          if (sortDirection === 'asc') {
+              return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+          } else {
+              return valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+          }
       });
 
       let html = '';
       results.forEach(livro => {
         html += `
           <tr>
-            <td>${escapeHtml(livro.Titulo)}</td>    <td>${escapeHtml(livro.Autor)}</td>     <td>${escapeHtml(livro.Estante)}</td>   <td>${escapeHtml(livro.Prateleira)}</td> </tr>`;
+            <td>${escapeHtml(livro.TITULO)}</td>    <td>${escapeHtml(livro.AUTOR)}</td>     <td class="text-center">${escapeHtml(livro.ARMARIO)}</td>    <td class="text-center">${escapeHtml(livro.PRATILEIRA)}</td> </tr>`;
       });
 
       tbody.innerHTML = html;
       countSpan.textContent = results.length;
+    }
+
+    function sortTable(column) {
+        if (currentSortColumn === column) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortColumn = column;
+            sortDirection = 'asc';
+        }
+        // Aplica a busca atual antes de re-exibir com a nova ordenação
+        searchBooks(); 
     }
 
     function escapeHtml(text) {
