@@ -128,56 +128,40 @@
     });
 
     function csvToJson(csv) {
-      const [headerLine, ...lines] = csv.trim().split('\n');
-      const headers = headerLine.split(',').map(h => h.trim());
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
 
-      return lines.map((line, index) => {
-        if (line.trim() === '') return null;
+  return lines.slice(1).map(line => {
+    const values = [];
+    let current = '';
+    let insideQuotes = false;
 
-        let title = '', author = '', armario = '', pratileira = '';
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
 
-        const firstQuoteIndex = line.indexOf('"');
-        const secondQuoteIndex = line.indexOf('"', firstQuoteIndex + 1);
-
-        if (firstQuoteIndex !== -1 && secondQuoteIndex !== -1) {
-          title = line.substring(firstQuoteIndex + 1, secondQuoteIndex);
-          line = line.substring(secondQuoteIndex + 1).trim();
-        } else {
-          const parts = line.split(',');
-          title = parts[0]?.trim() || '';
-          line = parts.slice(1).join(',');
-        }
-
-        if (line.startsWith(',')) line = line.substring(1).trim();
-
-        const thirdQuoteIndex = line.indexOf('"');
-        const fourthQuoteIndex = line.indexOf('"', thirdQuoteIndex + 1);
-
-        if (thirdQuoteIndex !== -1 && fourthQuoteIndex !== -1) {
-          author = line.substring(thirdQuoteIndex + 1, fourthQuoteIndex);
-          line = line.substring(fourthQuoteIndex + 1).trim();
-        } else {
-          const parts = line.split(',');
-          author = parts[0]?.trim() || '';
-          line = parts.slice(1).join(',');
-        }
-
-        if (line.startsWith(',')) line = line.substring(1).trim();
-
-        const remainingParts = line.split(',');
-        armario = remainingParts[0]?.trim() || '';
-        pratileira = remainingParts[1]?.trim() || '';
-
-        return {
-          [headers[0]]: title,
-          [headers[1]]: author,
-          [headers[2]]: armario,
-          [headers[3]]: pratileira
-        };
-      }).filter(Boolean);
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === ',' && !insideQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
     }
+    values.push(current.trim());
 
-    function searchBooks() {
+    const obj = {};
+    headers.forEach((header, i) => {
+      obj[header] = values[i] || '';
+    });
+
+    return obj;
+  });
+}
+function searchBooks() {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const filtrados = livros.filter(l => {
         const tituloExists = typeof l.TITULO === 'string';
