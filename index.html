@@ -161,15 +161,53 @@
       searchBooks();
     }
 
-    function displayResults(results) {
-      const tbody = document.getElementById('resultsBody');
-      const countSpan = document.getElementById('totalCount');
+function displayResults(results) {
+  const tbody = document.getElementById('resultsBody');
+  const countSpan = document.getElementById('totalCount');
 
-      if (!results.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum livro encontrado</td></tr>';
-        countSpan.textContent = '0';
-        return;
-      }
+  if (!results.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum livro encontrado</td></tr>';
+    countSpan.textContent = '0';
+    return;
+  }
+
+  let html = '';
+  results.forEach(livro => {
+    const armario = (livro.ARMARIO || '').trim().toLowerCase();
+    const prateleira = (livro.PRATILEIRA || '').trim().toLowerCase();
+    const titulo = (livro.TITULO || '').trim().toLowerCase();
+
+    // Calcular posição do livro na sua prateleira
+    const mesmosLugar = livros.filter(l =>
+      (l.ARMARIO || '').trim().toLowerCase() === armario &&
+      (l.PRATILEIRA || '').trim().toLowerCase() === prateleira
+    ).sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
+
+    const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim().toLowerCase() === titulo) + 1;
+    const total = mesmosLugar.length;
+    const gaugeMax = 60;
+    const percent = Math.min(100, (posicao / gaugeMax * 100).toFixed(1));
+
+    html += `
+      <tr>
+        <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
+        <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
+        <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
+        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
+        <td data-label="Posição" style="min-width: 160px;">
+          <div class="progress" style="height: 20px; border: 1px solid black;">
+            <div class="progress-bar bg-success" role="progressbar"
+                style="width: ${percent}%" aria-valuenow="${posicao}" aria-valuemin="0" aria-valuemax="${gaugeMax}">
+            </div>
+          </div>
+          <div style="font-size: 0.9em; margin-top: 4px;">📚 Livro ${posicao} de ${total}</div>
+        </td>
+      </tr>`;
+  });
+
+  tbody.innerHTML = html;
+  countSpan.textContent = results.length;
+}
 
       let html = '';
       results.forEach(livro => {
