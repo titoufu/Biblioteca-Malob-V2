@@ -122,12 +122,12 @@ function displayResults(results) {
   let html = '';
   results.forEach(livro => {
     const armario = (livro.ARMARIO || '').trim();
-    const prateleira = (livro.PRATELEIRA || '').trim();
+    const prateleira = (livro.PRATILEIRA || '').trim();
     const titulo = (livro.TITULO || '').trim();
     const chaveGrupo = `${armario}-${prateleira}`;
 
     const mesmosLugar = livros
-      .filter(l => `${(l.ARMARIO || '').trim()}-${(l.PRATELEIRA || '').trim()}` === chaveGrupo)
+      .filter(l => `${(l.ARMARIO || '').trim()}-${(l.PRATILEIRA || '').trim()}` === chaveGrupo)
       .sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
 
     const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim() === titulo) + 1;
@@ -140,7 +140,7 @@ function displayResults(results) {
         <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
         <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
         <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATELEIRA)}</td>
+        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
         <td data-label="Posição" style="min-width: 160px;">
           <div class="progress" style="height: 20px; border: 1px solid black;">
             <div class="progress-bar bg-success" role="progressbar"
