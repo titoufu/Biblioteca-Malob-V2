@@ -27,6 +27,7 @@ df[['TITULO', 'AUTOR', 'ARMARIO', 'PRATILEIRA']].to_json(
     orient="records",
     force_ascii=False,
     indent=2
+    
 )
 
 print(f"✅ JSON gerado com sucesso: {json_path}")
