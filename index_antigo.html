@@ -21,17 +21,8 @@
   <div class="container">
     <h1 class="text-center">Catálogo de Livros</h1>
 
-    <!-- Novo seletor de tipo de busca -->
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <select id="filtroTipo" class="form-select">
-          <option value="TITULO">Buscar por TÍTULO</option>
-          <option value="AUTOR">Buscar por AUTOR</option>
-        </select>
-      </div>
-      <div class="col-md-8">
-        <input type="text" id="searchInput" class="form-control" placeholder="Digite para buscar..." oninput="buscarLivro()" />
-      </div>
+    <div class="mb-3">
+      <input type="text" id="searchInput" class="form-control" placeholder="Buscar por título ou autor..." oninput="buscarLivro()" />
     </div>
 
     <div class="table-responsive">
@@ -75,20 +66,13 @@
         });
         return livro;
       });
-
-      buscarLivro(); // mostra todos os livros ordenados ao carregar
     }
 
     function buscarLivro() {
       const termo = document.getElementById('searchInput').value.toLowerCase();
-      const tipo = document.getElementById('filtroTipo').value;
-
-      const resultados = termo === ""
-        ? livros.slice().sort((a, b) => a.TITULO.localeCompare(b.TITULO))
-        : livros.filter(livro =>
-            livro[tipo]?.toLowerCase().includes(termo)
-          );
-
+      const resultados = livros.filter(livro =>
+        livro.TITULO.toLowerCase().includes(termo) || livro.AUTOR.toLowerCase().includes(termo)
+      );
       displayResults(resultados);
     }
 
@@ -143,6 +127,7 @@
       }) ?? '';
     }
 
+    // Carregar os dados ao iniciar
     carregarCSV();
   </script>
 </body>
