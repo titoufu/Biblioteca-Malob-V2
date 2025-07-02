@@ -70,9 +70,13 @@ let campoBusca = 'TITULO';
 async function carregarDados() {
   try {
     const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
     const csv = await res.text();
-    livros = csvToJson(csv);
-    console.log('Total de livros carregados:', livros.length); // Log para depuração
+    console.log('Tamanho do CSV:', csv.length, 'caracteres'); // Verificar tamanho do arquivo
+    
+    livros = parseCSV(csv);
+    console.log('Total de livros carregados:', livros.length);
     
     // Verificar distribuição por armário
     const armarios = {};
@@ -85,10 +89,87 @@ async function carregarDados() {
     livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
     searchBooks();
   } catch (err) {
-    document.getElementById('resultsBody').innerHTML =
-      '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
     console.error('Erro ao carregar dados:', err);
+    document.getElementById('resultsBody').innerHTML =
+      `<tr><td colspan="5" class="text-center text-danger">
+        Erro ao carregar dados: ${err.message}<br>
+        Livros carregados: ${livros.length}
+      </td></tr>`;
   }
+}
+
+// Parser CSV mais robusto
+function parseCSV(csv) {
+  const lines = csv.split(/\r?\n/);
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim());
+  const result = [];
+  let currentLine = '';
+  let insideQuotes = false;
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Verifica se a linha está dentro de aspas
+    const quoteCount = (line.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      insideQuotes = !insideQuotes;
+    }
+    
+    currentLine += (currentLine ? '\n' : '') + line;
+    
+    if (!insideQuotes && currentLine) {
+      const obj = parseCSVLine(currentLine, headers);
+      if (obj) result.push(obj);
+      currentLine = '';
+    }
+  }
+  
+  // Processar última linha se necessário
+  if (currentLine) {
+    const obj = parseCSVLine(currentLine, headers);
+    if (obj) result.push(obj);
+  }
+  
+  return result;
+}
+
+function parseCSVLine(line, headers) {
+  const values = [];
+  let current = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (line[i+1] === '"') { // Aspas duplas escapadas
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  values.push(current.trim());
+  
+  if (values.length !== headers.length) {
+    console.warn('Número de colunas incompatível na linha:', line);
+    return null;
+  }
+  
+  const obj = {};
+  headers.forEach((h, i) => {
+    obj[h] = values[i] || '';
+  });
+  
+  return obj;
 }
 
 function iniciarBusca(campo) {
@@ -105,54 +186,13 @@ function voltarInicio() {
   document.getElementById('searchInput').value = '';
 }
 
-function csvToJson(csv) {
-  const lines = csv.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  const result = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    
-    const values = [];
-    let current = '';
-    let insideQuotes = false;
-    
-    for (let j = 0; j < line.length; j++) {
-      const char = line[j];
-      
-      if (char === '"' && line[j + 1] === '"') {
-        current += '"';
-        j++;
-      } else if (char === '"') {
-        insideQuotes = !insideQuotes;
-      } else if (char === ',' && !insideQuotes) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    values.push(current.trim());
-    
-    const obj = {};
-    headers.forEach((h, k) => {
-      obj[h] = values[k] || '';
-    });
-    
-    result.push(obj);
-  }
-  
-  return result;
-}
-
 function searchBooks() {
   const termo = document.getElementById('searchInput').value.toLowerCase();
   const filtrados = termo === ''
     ? livros.slice().sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''))
     : livros.filter(l => (l[campoBusca] || '').toLowerCase().includes(termo));
   
-  console.log('Livros filtrados:', filtrados.length); // Log para depuração
+  console.log('Livros filtrados:', filtrados.length);
   displayResults(filtrados);
 }
 
