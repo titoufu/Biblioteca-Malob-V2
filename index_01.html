@@ -22,7 +22,7 @@
 
     async function carregarJSON() {
       try {
-       const response = await fetch('https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros_corrigidos.json');
+      const response = await fetch('https://raw.githubusercontent.com/titoufu/Biblioteca-Malob-V2/refs/heads/main/livros.csv')
         dadosLivros = await response.json();
         mostrarContagem();
       } catch (erro) {
