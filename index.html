@@ -171,12 +171,11 @@ function displayResults(results) {
     return;
   }
 
-  let html = '';
-  results.forEach(livro => {
-    const armario = (livro.ARMARIO || '').trim();
-    const prateleira = (livro.PRATILEIRA || '').trim();
-    const titulo = (livro.TITULO || '').trim();
-    const chaveGrupo = `${armario}-${prateleira}`;
+      let html = '';
+      results.forEach(livro => {
+        const armario = (livro.ARMARIO || '').trim().toLowerCase();
+        const prateleira = (livro.PRATILEIRA || '').trim().toLowerCase();
+        const titulo = (livro.TITULO || '').trim().toLowerCase();
 
     const mesmosLugar = livros
       .filter(l =>
