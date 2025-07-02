@@ -1,162 +1,207 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Biblioteca Malob</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta de Biblioteca</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
       padding: 20px;
     }
+    .search-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
     .table-responsive {
       margin-top: 20px;
     }
-    .progress {
-      height: 30px;
+    .gauge-container {
+      min-width: 120px;
+    }
+    @media (max-width: 576px) {
+      .table thead { display: none; }
+      .table tr {
+        display: block;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+      }
+      .table td {
+        display: block;
+        text-align: left !important;
+        font-size: 14px;
+        border: none;
+        padding: 5px 0;
+      }
+      .table td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        width: 100px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="text-center">Catálogo de Livros</h1>
+  <div class="search-container">
+    <div class="text-center mb-4">
+      <img src="https://i.imgur.com/XNwPlFt.jpeg" alt="Logo" style="max-height: 80px;">
+      <h2>Biblioteca Lar Espírita Maria Lobato de Freitas</h2>
+    </div>
 
-    <!-- Seletor de busca -->
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <select id="filtroTipo" class="form-select">
-          <option value="TITULO">Buscar por TÍTULO</option>
-          <option value="AUTOR">Buscar por AUTOR</option>
-        </select>
-      </div>
-      <div class="col-md-8">
-        <input type="text" id="searchInput" class="form-control" placeholder="Digite para buscar..." oninput="buscarLivro()" />
-      </div>
+    <!-- Critério de busca -->
+    <div class="input-group mb-3">
+      <select id="campoBusca" class="form-select" style="max-width: 180px;">
+        <option value="TITULO">Por TÍTULO</option>
+        <option value="AUTOR">Por AUTOR</option>
+      </select>
+      <input type="text" id="searchInput" class="form-control" placeholder="Digite para buscar...">
+      <button class="btn btn-primary" type="button" onclick="searchBooks()">Buscar</button>
+      <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">Limpar</button>
     </div>
 
     <div class="table-responsive">
-      <table class="table table-striped table-bordered">
-        <thead class="table-dark">
+      <table class="table table-striped">
+        <thead class="table-light">
           <tr>
             <th>Título</th>
             <th>Autor</th>
             <th class="text-center">Armário</th>
             <th class="text-center">Prateleira</th>
+            <th class="text-center">Posição</th>
           </tr>
         </thead>
-        <tbody id="resultados"></tbody>
+        <tbody id="resultsBody">
+          <tr>
+            <td colspan="5" class="text-center">Carregando dados...</td>
+          </tr>
+        </tbody>
       </table>
     </div>
 
-    <!-- Gauge de posição -->
-    <div id="gaugeContainer" class="mt-5 d-none">
-      <h5 class="text-center">Posição do Livro na Prateleira</h5>
-      <div class="progress">
-        <div id="gaugeBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0"
-          aria-valuemin="0" aria-valuemax="100">0%</div>
-      </div>
-      <p class="text-center mt-2" id="gaugeLabel"></p>
+    <div class="mt-3 text-muted text-center small">
+      Total de livros encontrados: <span id="totalCount">0</span>
     </div>
   </div>
 
   <script>
+    const CSV_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros.csv';
     let livros = [];
 
-    async function carregarCSV() {
-      const response = await fetch('https://titoufu.github.io/Biblioteca-Malob-V2/livros.csv');
-      const texto = await response.text();
-
-      // Parsing robusto com suporte a campos entre aspas
-      function parseCSVLine(line) {
-        const regex = /("([^"]*)"|[^,]+)(?=\s*,|\s*$)/g;
-        const cols = [];
-        let match;
-        while ((match = regex.exec(line)) !== null) {
-          const raw = match[1].trim();
-          cols.push(raw.startsWith('"') ? raw.slice(1, -1) : raw);
-        }
-        return cols;
-      }
-
-      const linhas = texto.trim().split('\n');
-      const cabecalhos = parseCSVLine(linhas[0]);
-      livros = linhas.slice(1).map(linha => {
-        const colunas = parseCSVLine(linha);
-        const livro = {};
-        cabecalhos.forEach((chave, i) => {
-          livro[chave.trim()] = colunas[i]?.trim() ?? '';
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch(CSV_URL)
+        .then(res => res.text())
+        .then(csv => {
+          livros = csvToJson(csv);
+          livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
+          displayResults(livros);
+        })
+        .catch(err => {
+          document.getElementById('resultsBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+          console.error(err);
         });
-        return livro;
+
+      document.getElementById('searchInput').addEventListener('keyup', e => {
+        if (e.key === 'Enter') searchBooks();
       });
+    });
 
-      buscarLivro();
+    function csvToJson(csv) {
+      const lines = csv.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      return lines.slice(1).map(line => {
+        const values = [];
+        let current = '', insideQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i + 1] === '"') {
+            current += '"'; i++;
+          } else if (char === '"') {
+            insideQuotes = !insideQuotes;
+          } else if (char === ',' && !insideQuotes) {
+            values.push(current.trim()); current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = values[i] || '');
+        return obj;
+      });
     }
 
-    function buscarLivro() {
+    function searchBooks() {
+      const campo = document.getElementById('campoBusca').value;
       const termo = document.getElementById('searchInput').value.toLowerCase();
-      const tipo = document.getElementById('filtroTipo').value;
 
-      const resultados = termo === ""
-        ? livros.slice().sort((a, b) => a.TITULO.localeCompare(b.TITULO))
-        : livros.filter(livro =>
-            livro[tipo]?.toLowerCase().includes(termo)
-          );
+      const filtrados = termo === ''
+        ? livros.slice().sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''))
+        : livros.filter(l => (l[campo] || '').toLowerCase().includes(termo));
 
-      displayResults(resultados);
+      displayResults(filtrados);
     }
 
-    function displayResults(lista) {
-      const tabela = document.getElementById('resultados');
-      tabela.innerHTML = '';
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      searchBooks();
+    }
 
-      if (lista.length === 0) {
-        tabela.innerHTML = `<tr><td colspan="4" class="text-center">Nenhum livro encontrado.</td></tr>`;
-        document.getElementById('gaugeContainer').classList.add('d-none');
+    function displayResults(results) {
+      const tbody = document.getElementById('resultsBody');
+      const countSpan = document.getElementById('totalCount');
+
+      if (!results.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum livro encontrado</td></tr>';
+        countSpan.textContent = '0';
         return;
       }
 
-      for (const livro of lista) {
-        const linha = document.createElement('tr');
-        linha.innerHTML = `
-          <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
-          <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
-          <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-          <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
-        `;
-        linha.onclick = () => mostrarGauge(livro.TITULO, livro.ARMARIO, livro.PRATILEIRA);
-        tabela.appendChild(linha);
-      }
-    }
+      let html = '';
+      results.forEach(livro => {
+        const armario = (livro.ARMARIO || '').trim().toLowerCase();
+        const prateleira = (livro.PRATILEIRA || '').trim().toLowerCase();
+        const titulo = (livro.TITULO || '').trim().toLowerCase();
 
-    function mostrarGauge(titulo, armario, prateleira) {
-      const livrosNaPrateleira = livros.filter(l =>
-        l.ARMARIO === armario && l.PRATILEIRA === prateleira
-      ).sort((a, b) => a.TITULO.localeCompare(b.TITULO));
+        const mesmosLugar = livros
+          .filter(l =>
+            (l.ARMARIO || '').trim().toLowerCase() === armario &&
+            (l.PRATILEIRA || '').trim().toLowerCase() === prateleira
+          )
+          .sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
 
-      const posicao = livrosNaPrateleira.findIndex(l => l.TITULO === titulo) + 1;
-      const total = livrosNaPrateleira.length;
-      const percentual = Math.round((posicao / total) * 100);
+        const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim().toLowerCase() === titulo) + 1;
+        const total = mesmosLugar.length;
+        const gaugeMax = 60;
+        const percent = Math.min(100, (posicao / gaugeMax * 100).toFixed(1));
 
-      const gauge = document.getElementById('gaugeContainer');
-      const barra = document.getElementById('gaugeBar');
-      const label = document.getElementById('gaugeLabel');
+        html += `
+          <tr>
+            <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
+            <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
+            <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
+            <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
+            <td data-label="Posição" style="min-width: 160px;">
+              <div class="progress" style="height: 20px; border: 1px solid black;">
+                <div class="progress-bar bg-success" role="progressbar"
+                    style="width: ${percent}%" aria-valuenow="${posicao}" aria-valuemin="0" aria-valuemax="${gaugeMax}">
+                </div>
+              </div>
+              <div style="font-size: 0.9em; margin-top: 4px;">📚 Livro ${posicao} de ${total}</div>
+            </td>
+          </tr>`;
+      });
 
-      barra.style.width = `${percentual}%`;
-      barra.setAttribute('aria-valuenow', percentual);
-      barra.textContent = `${percentual}%`;
-      label.textContent = `O livro "${titulo}" está na posição ${posicao} de ${total} na prateleira ${prateleira}, armário ${armario}.`;
-
-      gauge.classList.remove('d-none');
+      tbody.innerHTML = html;
+      countSpan.textContent = results.length;
     }
 
     function escapeHtml(text) {
-      return text?.replace(/[&<>"']/g, match => {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return map[match];
-      }) ?? '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text?.replace(/[&<>"']/g, m => map[m]) || '';
     }
-
-    carregarCSV();
   </script>
 </body>
 </html>
