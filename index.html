@@ -19,7 +19,6 @@
   </style>
 </head>
 <body>
-  <!-- Interface mantida igual -->
   <div id="telaInicial" class="text-center">
     <h2>Biblioteca Lar Espírita Maria Lobato de Freitas</h2>
     <p class="mt-4">Como deseja realizar a consulta?</p>
@@ -64,178 +63,31 @@
   </div>
 
 <script>
-const CSV_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros.csv';
+const JSON_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob-V2/main/livros_corrigidos.json';
 let livros = [];
 let campoBusca = 'TITULO';
 
-async function carregarDados() {
+async function carregarJSON() {
   try {
-    // Etapa 1: Baixar o CSV como texto puro
-    const response = await fetch(CSV_URL);
+    const response = await fetch(JSON_URL);
     if (!response.ok) throw new Error(`Erro HTTP! status: ${response.status}`);
-    
-    // Etapa 2: Processar manualmente o texto
-    const csvText = await response.text();
-    console.log('Tamanho do arquivo:', csvText.length, 'caracteres');
-    
-    // Etapa 3: Correção prévia de problemas no CSV
-    const csvCorrigido = corrigirCSV(csvText);
-    
-    // Etapa 4: Processar linha por linha com tratamento robusto
-    livros = processarCSV(csvCorrigido);
-    
-    console.log('Total de livros carregados:', livros.length);
-    
-    // Verificação final
-    const armarios = {};
-    livros.forEach(livro => {
-      const armario = livro.ARMARIO || 'Sem armário';
-      armarios[armario] = (armarios[armario] || 0) + 1;
-    });
-    console.log('Distribuição por armário:', armarios);
-    
-    if (Object.keys(armarios).length < 7) {
-      console.warn('Aviso: Nem todos os armários foram carregados!');
-      // Tentativa alternativa de carregamento
-      await tentativaAlternativa();
-      return;
-    }
-    
+    livros = await response.json();
     livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
     searchBooks();
-    
-  } catch (err) {
-    console.error('Erro crítico:', err);
+  } catch (erro) {
     document.getElementById('resultsBody').innerHTML = `
       <tr><td colspan="5" class="text-center text-danger">
-        Erro grave ao carregar dados. Tente recarregar a página.<br>
-        Detalhes: ${err.message}
+        Erro ao carregar JSON: ${erro.message}
       </td></tr>`;
   }
 }
 
-// Função para corrigir problemas conhecidos no CSV
-function corrigirCSV(csvText) {
-  // 1. Corrigir quebras de linha dentro de campos entre aspas
-  let dentroDeAspas = false;
-  let resultado = '';
-  
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    
-    if (char === '"') {
-      dentroDeAspas = !dentroDeAspas;
-      resultado += char;
-    } else if (char === '\n' && dentroDeAspas) {
-      resultado += ' '; // Substitui quebra de linha por espaço
-    } else {
-      resultado += char;
-    }
-  }
-  
-  // 2. Garantir que a última linha termine com quebra de linha
-  if (!resultado.endsWith('\n')) {
-    resultado += '\n';
-  }
-  
-  return resultado;
-}
-
-// Processador CSV ultra robusto
-function processarCSV(csvText) {
-  const linhas = csvText.split(/\r?\n/);
-  if (linhas.length < 2) return [];
-  
-  const cabecalhos = linhas[0].split(',').map(h => h.trim());
-  const dados = [];
-  
-  let linhaAtual = [];
-  let campoAtual = '';
-  let dentroDeAspas = false;
-  
-  for (let i = 1; i < linhas.length; i++) {
-    const linha = linhas[i].trim();
-    if (!linha) continue;
-    
-    for (let j = 0; j < linha.length; j++) {
-      const char = linha[j];
-      
-      if (char === '"') {
-        if (linha[j+1] === '"') {
-          campoAtual += '"';
-          j++;
-        } else {
-          dentroDeAspas = !dentroDeAspas;
-        }
-      } else if (char === ',' && !dentroDeAspas) {
-        linhaAtual.push(campoAtual.trim());
-        campoAtual = '';
-      } else {
-        campoAtual += char;
-      }
-    }
-    
-    if (!dentroDeAspas) {
-      linhaAtual.push(campoAtual.trim());
-      if (linhaAtual.length === cabecalhos.length) {
-        const livro = {};
-        cabecalhos.forEach((cabecalho, index) => {
-          livro[cabecalho] = linhaAtual[index] || '';
-        });
-        dados.push(livro);
-      } else {
-        console.warn('Linha ignorada - número incorreto de colunas:', linhaAtual);
-      }
-      linhaAtual = [];
-      campoAtual = '';
-    } else {
-      campoAtual += '\n'; // Mantém quebras de linha internas
-    }
-  }
-  
-  return dados;
-}
-
-// Método alternativo como fallback
-async function tentativaAlternativa() {
-  try {
-    console.log('Tentando método alternativo de carregamento...');
-    
-    // Carrega o CSV linha por linha via API GitHub
-    const response = await fetch(`https://api.github.com/repos/titoufu/Biblioteca-Malob/contents/livros.csv`);
-    const data = await response.json();
-    const csvContent = atob(data.content);
-    
-    // Processa novamente
-    livros = processarCSV(csvContent);
-    console.log('Total de livros (método alternativo):', livros.length);
-    
-    const armarios = {};
-    livros.forEach(livro => {
-      const armario = livro.ARMARIO || 'Sem armário';
-      armarios[armario] = (armarios[armario] || 0) + 1;
-    });
-    console.log('Distribuição por armário (alternativo):', armarios);
-    
-    livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
-    searchBooks();
-    
-  } catch (err) {
-    console.error('Falha no método alternativo:', err);
-    document.getElementById('resultsBody').innerHTML = `
-      <tr><td colspan="5" class="text-center text-danger">
-        Não foi possível carregar todos os dados. Contate o administrador.
-      </td></tr>`;
-  }
-}
-
-// Restante do código mantido igual...
 function iniciarBusca(campo) {
   campoBusca = campo;
   document.getElementById('telaInicial').classList.add('hidden');
   document.getElementById('telaBusca').classList.remove('hidden');
   document.getElementById('tituloBusca').textContent = `Consulta por ${campo === 'TITULO' ? 'TÍTULO' : 'AUTOR'}`;
-  carregarDados();
+  carregarJSON();
 }
 
 function voltarInicio() {
@@ -249,8 +101,6 @@ function searchBooks() {
   const filtrados = termo === ''
     ? livros.slice().sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''))
     : livros.filter(l => (l[campoBusca] || '').toLowerCase().includes(termo));
-  
-  console.log('Livros filtrados:', filtrados.length);
   displayResults(filtrados);
 }
 
@@ -272,14 +122,12 @@ function displayResults(results) {
   let html = '';
   results.forEach(livro => {
     const armario = (livro.ARMARIO || '').trim();
-    const prateleira = (livro.PRATILEIRA || '').trim();
+    const prateleira = (livro.PRATELEIRA || '').trim();
     const titulo = (livro.TITULO || '').trim();
     const chaveGrupo = `${armario}-${prateleira}`;
 
     const mesmosLugar = livros
-      .filter(l =>
-        `${(l.ARMARIO || '').trim()}-${(l.PRATILEIRA || '').trim()}` === chaveGrupo
-      )
+      .filter(l => `${(l.ARMARIO || '').trim()}-${(l.PRATELEIRA || '').trim()}` === chaveGrupo)
       .sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
 
     const posicao = mesmosLugar.findIndex(l => (l.TITULO || '').trim() === titulo) + 1;
@@ -292,7 +140,7 @@ function displayResults(results) {
         <td data-label="Título">${escapeHtml(livro.TITULO)}</td>
         <td data-label="Autor">${escapeHtml(livro.AUTOR)}</td>
         <td data-label="Armário" class="text-center">${escapeHtml(livro.ARMARIO)}</td>
-        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATILEIRA)}</td>
+        <td data-label="Prateleira" class="text-center">${escapeHtml(livro.PRATELEIRA)}</td>
         <td data-label="Posição" style="min-width: 160px;">
           <div class="progress" style="height: 20px; border: 1px solid black;">
             <div class="progress-bar bg-success" role="progressbar"
