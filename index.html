@@ -9,12 +9,18 @@
     body {
       padding: 20px;
     }
+    .hidden {
+      display: none !important;
+    }
     .search-container {
       max-width: 900px;
       margin: 0 auto;
     }
     .table-responsive {
       margin-top: 20px;
+    }
+    .gauge-container {
+      min-width: 120px;
     }
     @media (max-width: 576px) {
       .table thead { display: none; }
@@ -42,15 +48,27 @@
   </style>
 </head>
 <body>
-  <div class="search-container">
+  <!-- Tela Inicial -->
+  <div id="telaInicial" class="text-center">
+    <img src="https://i.imgur.com/XNwPlFt.jpeg" alt="Logo" style="max-height: 100px; margin-bottom: 20px;">
+    <h2>Biblioteca Lar Espírita Maria Lobato de Freitas</h2>
+    <p class="mt-4">Como deseja realizar a consulta?</p>
+    <div class="d-grid gap-3 col-6 mx-auto mt-3">
+      <button onclick="iniciarBusca('TITULO')" class="btn btn-primary btn-lg">🔍 Consultar por TÍTULO</button>
+      <button onclick="iniciarBusca('AUTOR')" class="btn btn-secondary btn-lg">🔍 Consultar por AUTOR</button>
+    </div>
+  </div>
+
+  <!-- Tela de Busca -->
+  <div id="telaBusca" class="search-container hidden">
     <div class="text-center mb-4">
       <img src="https://i.imgur.com/XNwPlFt.jpeg" alt="Logo" style="max-height: 80px;">
-      <h2>Biblioteca Lar Espírita Maria Lobato de Freitas</h2>
+      <h2 id="tituloBusca">Consulta</h2>
+      <button onclick="voltarInicio()" class="btn btn-link btn-sm">← Voltar ao início</button>
     </div>
 
-    <!-- Campo de busca por título apenas -->
     <div class="input-group mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Digite parte do TÍTULO do livro...">
+      <input type="text" id="searchInput" class="form-control" placeholder="Digite para buscar...">
       <button class="btn btn-primary" type="button" onclick="searchBooks()">Buscar</button>
       <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">Limpar</button>
     </div>
@@ -67,9 +85,7 @@
           </tr>
         </thead>
         <tbody id="resultsBody">
-          <tr>
-            <td colspan="5" class="text-center">Carregando dados...</td>
-          </tr>
+          <tr><td colspan="5" class="text-center">Carregando dados...</td></tr>
         </tbody>
       </table>
     </div>
@@ -82,24 +98,35 @@
   <script>
     const CSV_URL = 'https://raw.githubusercontent.com/titoufu/Biblioteca-Malob/main/livros.csv';
     let livros = [];
+    let campoBusca = 'TITULO';
 
-    document.addEventListener('DOMContentLoaded', () => {
-      fetch(CSV_URL)
-        .then(res => res.text())
-        .then(csv => {
-          livros = csvToJson(csv);
-          livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
-          displayResults(livros);
-        })
-        .catch(err => {
-          document.getElementById('resultsBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
-          console.error(err);
-        });
+    async function carregarDados() {
+      try {
+        const res = await fetch(CSV_URL);
+        const csv = await res.text();
+        livros = csvToJson(csv);
+        livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
+        searchBooks();
+      } catch (err) {
+        document.getElementById('resultsBody').innerHTML =
+          '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+        console.error(err);
+      }
+    }
 
-      document.getElementById('searchInput').addEventListener('keyup', e => {
-        if (e.key === 'Enter') searchBooks();
-      });
-    });
+    function iniciarBusca(campo) {
+      campoBusca = campo;
+      document.getElementById('telaInicial').classList.add('hidden');
+      document.getElementById('telaBusca').classList.remove('hidden');
+      document.getElementById('tituloBusca').textContent = `Consulta por ${campo === 'TITULO' ? 'TÍTULO' : 'AUTOR'}`;
+      carregarDados();
+    }
+
+    function voltarInicio() {
+      document.getElementById('telaBusca').classList.add('hidden');
+      document.getElementById('telaInicial').classList.remove('hidden');
+      document.getElementById('searchInput').value = '';
+    }
 
     function csvToJson(csv) {
       const lines = csv.trim().split('\n');
@@ -109,15 +136,10 @@
         let current = '', insideQuotes = false;
         for (let i = 0; i < line.length; i++) {
           const char = line[i];
-          if (char === '"' && line[i + 1] === '"') {
-            current += '"'; i++;
-          } else if (char === '"') {
-            insideQuotes = !insideQuotes;
-          } else if (char === ',' && !insideQuotes) {
-            values.push(current.trim()); current = '';
-          } else {
-            current += char;
-          }
+          if (char === '"' && line[i + 1] === '"') { current += '"'; i++; }
+          else if (char === '"') { insideQuotes = !insideQuotes; }
+          else if (char === ',' && !insideQuotes) { values.push(current.trim()); current = ''; }
+          else { current += char; }
         }
         values.push(current.trim());
         const obj = {};
@@ -128,11 +150,9 @@
 
     function searchBooks() {
       const termo = document.getElementById('searchInput').value.toLowerCase();
-
       const filtrados = termo === ''
         ? livros.slice().sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''))
-        : livros.filter(l => (l.TITULO || '').toLowerCase().includes(termo));
-
+        : livros.filter(l => (l[campoBusca] || '').toLowerCase().includes(termo));
       displayResults(filtrados);
     }
 
