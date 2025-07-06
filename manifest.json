@@ -2,7 +2,9 @@
   "name": "Lar Espírita Maria Lobato de Freitas",
   "short_name": "Maria Lobato",
   "start_url": "/Biblioteca-Malob-V2/",
-  "display": "standalone",
+  "display": "browser",
+
+
   "background_color": "#f2f4f8",
   "theme_color": "#1976d2",
   "icons": [
