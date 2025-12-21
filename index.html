@@ -121,19 +121,37 @@
     let campoBusca = 'TITULO';
 
     async function carregarJSON() {
-      try {
-        const response = await fetch(JSON_URL);
-        if (!response.ok) throw new Error(`Erro HTTP! status: ${response.status}`);
-        livros = await response.json();
-        livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
-        searchBooks();
-      } catch (erro) {
-        document.getElementById('resultsBody').innerHTML = `
+  try {
+    const response = await fetch(JSON_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Erro HTTP! status: ${response.status}`);
+
+    const data = await response.json();
+
+    if (!data.items || !Array.isArray(data.items)) {
+      throw new Error("JSON não está no formato esperado (faltou 'items').");
+    }
+
+    // Converte items (array compacto) -> objetos como seu código espera
+    livros = data.items.map(arr => ({
+      TITULO: arr[0] || "",
+      AUTOR: arr[1] || "",
+      ARMARIO: arr[2] || "",
+      PRATILEIRA: arr[3] || "",
+      TITULO_NORM: arr[4] || "",
+      AUTOR_NORM: arr[5] || ""
+    }));
+
+    livros.sort((a, b) => (a.TITULO || '').localeCompare(b.TITULO || ''));
+    searchBooks();
+  } catch (erro) {
+    document.getElementById('resultsBody').innerHTML = `
       <tr><td colspan="5" class="text-center text-danger">
         Erro ao carregar JSON: ${erro.message}
       </td></tr>`;
-      }
-    }
+    console.error(erro);
+  }
+}
+
 
     function iniciarBusca(campo) {
       campoBusca = campo;
