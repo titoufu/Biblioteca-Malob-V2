@@ -11,7 +11,8 @@ from pathlib import Path
 mysql_path = r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 
 # Diretório onde serão salvos CSV/JSON e o SQL normalizado
-out_dir = r"F:\TitoDocumentos\Doutrina\MariaLobato\BancoDeDadosBiblioteca"
+#out_dir = r"F:\TitoDocumentos\Doutrina\MariaLobato\BancoDeDadosBiblioteca"
+out_dir = "."  
 Path(out_dir).mkdir(parents=True, exist_ok=True)
 
 # Saídas
